@@ -10,6 +10,7 @@ import sys
 import yfinance as yf
 import time
 import os
+import select
 from datetime import datetime
 from collections import defaultdict
 import configparser
@@ -25,6 +26,36 @@ except ImportError:
 COLOR_GREEN = '\033[92m'
 COLOR_RED = '\033[91m'
 COLOR_RESET = '\033[0m'
+
+
+def wait_for_key_or_timeout(timeout):
+    """
+    Waits for 'C' key press or timeout.
+    
+    Args:
+        timeout: Time to wait in seconds
+    
+    Returns:
+        True if 'C' was pressed, False if timeout
+    """
+    start_time = time.time()
+    remaining = timeout
+    
+    while remaining > 0:
+        print(f"\rNext update in {int(remaining)} seconds... (Press 'C' to see charts)", end='', flush=True)
+        
+        # Check if there's input available (non-blocking)
+        if select.select([sys.stdin], [], [], 1)[0]:
+            key = sys.stdin.read(1)
+            if key.lower() == 'c':
+                print()  # New line
+                return True
+        
+        elapsed = time.time() - start_time
+        remaining = timeout - elapsed
+    
+    print()  # New line after countdown
+    return False
 
 
 def load_config():
@@ -289,20 +320,24 @@ def main():
             
             print(f"{'='*100}\n")
             
-            # Draw separate charts for each stock
-            for stock_symbol in stocks.keys():
-                if stock_symbol in history and len(history[stock_symbol]) >= 2:
-                    # Get currency from last read
-                    result = get_stock_price(stock_symbol)
-                    currency = result['currency'] if result else 'PLN'
-                    draw_chart(history[stock_symbol], stock_symbol, config, currency)
-                    print()
+            # Wait for key press or timeout
+            show_charts = wait_for_key_or_timeout(refresh_interval)
             
-            print(f"{'='*100}")
-            print(f"Next update in {refresh_interval} seconds...")
-            print(f"{'='*100}")
-            
-            time.sleep(refresh_interval)
+            # Draw charts only if user pressed 'C'
+            if show_charts:
+                print(f"\n{'='*100}")
+                print("Displaying charts...")
+                print(f"{'='*100}\n")
+                
+                for stock_symbol in stocks.keys():
+                    if stock_symbol in history and len(history[stock_symbol]) >= 2:
+                        # Get currency from last read
+                        result = get_stock_price(stock_symbol)
+                        currency = result['currency'] if result else 'PLN'
+                        draw_chart(history[stock_symbol], stock_symbol, config, currency)
+                        print()
+                
+                print(f"{'='*100}\n")
             
     except KeyboardInterrupt:
         print("\n\nStopped monitoring prices.")
