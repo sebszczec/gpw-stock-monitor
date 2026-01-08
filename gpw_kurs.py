@@ -11,6 +11,8 @@ import yfinance as yf
 import time
 import os
 import select
+import tty
+import termios
 from datetime import datetime
 from collections import defaultdict
 import configparser
@@ -30,32 +32,42 @@ COLOR_RESET = '\033[0m'
 
 def wait_for_key_or_timeout(timeout):
     """
-    Waits for 'C' key press or timeout.
+    Waits for 'c' key press or timeout.
     
     Args:
         timeout: Time to wait in seconds
     
     Returns:
-        True if 'C' was pressed, False if timeout
+        True if 'c' was pressed, False if timeout
     """
     start_time = time.time()
     remaining = timeout
     
-    while remaining > 0:
-        print(f"\rNext update in {int(remaining)} seconds... (Press 'C' to see charts)", end='', flush=True)
-        
-        # Check if there's input available (non-blocking)
-        if select.select([sys.stdin], [], [], 1)[0]:
-            key = sys.stdin.read(1)
-            if key.lower() == 'c':
-                print()  # New line
-                return True
-        
-        elapsed = time.time() - start_time
-        remaining = timeout - elapsed
+    # Save terminal settings
+    old_settings = termios.tcgetattr(sys.stdin)
     
-    print()  # New line after countdown
-    return False
+    try:
+        # Set terminal to raw mode (no echo, no buffering)
+        tty.setcbreak(sys.stdin.fileno())
+        
+        while remaining > 0:
+            print(f"\rNext update in {int(remaining)} seconds... (Press 'c' to see charts)", end='', flush=True)
+            
+            # Check if there's input available (non-blocking)
+            if select.select([sys.stdin], [], [], 1)[0]:
+                key = sys.stdin.read(1)
+                if key.lower() == 'c':
+                    print()  # New line
+                    return True
+            
+            elapsed = time.time() - start_time
+            remaining = timeout - elapsed
+        
+        print()  # New line after countdown
+        return False
+    finally:
+        # Restore terminal settings
+        termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
 
 
 def load_config():
