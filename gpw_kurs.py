@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Program do pobierania kursu akcji z GPW (Giełda Papierów Wartościowych w Warszawie)
-Użycie: python gpw_kurs.py PLIK_Z_AKCJAMI
-Przykład: python gpw_kurs.py akcje.txt
-Program sprawdza kursy co 60 sekund i wyświetla je na ekranie.
+Program for fetching stock prices from GPW (Warsaw Stock Exchange)
+Usage: python gpw_kurs.py STOCKS_FILE
+Example: python gpw_kurs.py akcje.txt
+Program checks prices every configurable interval and displays them on screen.
 """
 
 import sys
@@ -16,7 +16,7 @@ import configparser
 try:
     import plotext as plt
 except ImportError:
-    print("Instaluję bibliotekę plotext...")
+    print("Installing plotext library...")
     import subprocess
     subprocess.check_call([sys.executable, "-m", "pip", "install", "plotext"])
     import plotext as plt
@@ -29,10 +29,10 @@ COLOR_RESET = '\033[0m'
 
 def load_config():
     """
-    Wczytuje konfigurację z pliku config.ini.
+    Loads configuration from config.ini file.
     
     Returns:
-        Słownik z ustawieniami konfiguracyjnymi
+        Dictionary with configuration settings
     """
     config = configparser.ConfigParser()
     config_path = os.path.join(os.path.dirname(__file__), 'config.ini')
@@ -55,24 +55,24 @@ def load_config():
                 'plot_height': config.getint('Settings', 'plot_height', fallback=defaults['plot_height'])
             }
         except Exception as e:
-            print(f"Uwaga: Błąd podczas wczytywania konfiguracji: {e}")
-            print("Używam domyślnych ustawień.")
+            print(f"Warning: Error loading configuration: {e}")
+            print("Using default settings.")
             return defaults
     else:
-        print(f"Uwaga: Nie znaleziono pliku config.ini, używam domyślnych ustawień.")
+        print(f"Warning: config.ini file not found, using default settings.")
         return defaults
 
 
 def load_stocks_from_file(filename):
     """
-    Wczytuje listę symboli akcji z pliku tekstowego.
-    Format: SYMBOL,CENA_ZAKUPU lub samo SYMBOL (wtedy cena zakupu = 0.00)
+    Loads list of stock symbols from text file.
+    Format: SYMBOL,PURCHASE_PRICE or just SYMBOL (then purchase price = 0.00)
     
     Args:
-        filename: Ścieżka do pliku z symbolami akcji
+        filename: Path to file with stock symbols
     
     Returns:
-        Słownik {symbol: cena_zakupu}
+        Dictionary {symbol: purchase_price}
     """
     try:
         stocks = {}
@@ -98,22 +98,22 @@ def load_stocks_from_file(filename):
         
         return stocks if stocks else None
     except FileNotFoundError:
-        print(f"Błąd: Nie znaleziono pliku '{filename}'", file=sys.stderr)
+        print(f"Error: File '{filename}' not found", file=sys.stderr)
         return None
     except Exception as e:
-        print(f"Błąd podczas czytania pliku: {e}", file=sys.stderr)
+        print(f"Error reading file: {e}", file=sys.stderr)
         return None
 
 
 def draw_chart(price_history, stock_symbol, config, currency='PLN'):
     """
-    Rysuje wykres kursu akcji w terminalu.
+    Draws stock price chart in terminal.
     
     Args:
-        price_history: Lista z danymi (czas, kurs)
-        stock_symbol: Symbol akcji
-        config: Słownik z konfiguracją
-        currency: Waluta kursu
+        price_history: List with data (time, price)
+        stock_symbol: Stock symbol
+        config: Dictionary with configuration
+        currency: Price currency
     """
     if len(price_history) < 2:
         return
@@ -127,9 +127,9 @@ def draw_chart(price_history, stock_symbol, config, currency='PLN'):
     # Create chart in terminal
     plt.clf()
     plt.plot(indices, prices, marker="braille")
-    plt.title(f"Wykres kursu {stock_symbol}")
-    plt.xlabel("Czas")
-    plt.ylabel(f"Kurs ({currency})")
+    plt.title(f"Price Chart {stock_symbol}")
+    plt.xlabel("Time")
+    plt.ylabel(f"Price ({currency})")
     
     # Set X axis labels - show every few points for readability
     step = max(1, len(times) // 5)  # Show max 5-6 labels
@@ -143,14 +143,14 @@ def draw_chart(price_history, stock_symbol, config, currency='PLN'):
 
 def calculate_profit_loss(current_price, purchase_price):
     """
-    Oblicza zysk/stratę w procentach i wartości bezwzględnej.
+    Calculates profit/loss in percentage and absolute value.
     
     Args:
-        current_price: Aktualny kurs akcji
-        purchase_price: Cena zakupu akcji
+        current_price: Current stock price
+        purchase_price: Stock purchase price
     
     Returns:
-        Tuple (procent_zmiany, kwota_zmiany, czy_zysk)
+        Tuple (percent_change, amount_change, is_profit)
     """
     if purchase_price == 0.00:
         return None, None, None
@@ -164,13 +164,13 @@ def calculate_profit_loss(current_price, purchase_price):
 
 def get_stock_price(stock_symbol):
     """
-    Pobiera aktualny kurs akcji z GPW.
+    Fetches current stock price from GPW.
     
     Args:
-        stock_symbol: Symbol akcji (np. 'PKO', 'PKNORLEN')
+        stock_symbol: Stock symbol (e.g. 'PKO', 'PKNORLEN')
     
     Returns:
-        Aktualny kurs akcji lub None w przypadku błędu
+        Current stock price or None in case of error
     """
     try:
         # Add .WA suffix for GPW stocks
@@ -193,7 +193,7 @@ def get_stock_price(stock_symbol):
             price = info['regularMarketPrice']
         elif 'previousClose' in info and info['previousClose']:
             price = info['previousClose']
-            print(f"Uwaga: Zwracam kurs zamknięcia z poprzedniej sesji")
+            print(f"Note: Returning closing price from previous session")
         
         if price:
             currency = info.get('currency', 'PLN')
@@ -208,16 +208,16 @@ def get_stock_price(stock_symbol):
             return None
             
     except Exception as e:
-        print(f"Błąd podczas pobierania danych: {e}", file=sys.stderr)
+        print(f"Error fetching data: {e}", file=sys.stderr)
         return None
 
 
 def main():
     if len(sys.argv) != 2:
-        print("Użycie: python gpw_kurs.py PLIK_Z_AKCJAMI")
-        print("Przykład: python gpw_kurs.py akcje.txt")
-        print("\nFormat pliku: jeden symbol akcji w każdej linii")
-        print("Przykład zawartości pliku:")
+        print("Usage: python gpw_kurs.py STOCKS_FILE")
+        print("Example: python gpw_kurs.py akcje.txt")
+        print("\nFile format: one stock symbol per line")
+        print("Example file contents:")
         print("  PKO")
         print("  PKNORLEN")
         print("  KGHM")
@@ -230,20 +230,20 @@ def main():
     refresh_interval = config['refresh_interval']
     max_history = config['max_history']
     
-    print(f"Wczytuję listę akcji z pliku: {stocks_file}...")
+    print(f"Loading stock list from file: {stocks_file}...")
     stocks = load_stocks_from_file(stocks_file)
     
     if not stocks:
-        print("Nie udało się wczytać listy akcji.")
+        print("Failed to load stock list.")
         sys.exit(1)
     
     if len(stocks) == 0:
-        print("Plik nie zawiera żadnych symboli akcji.")
+        print("File contains no stock symbols.")
         sys.exit(1)
     
-    print(f"Znaleziono {len(stocks)} akcji: {', '.join(stocks.keys())}")
-    print(f"\nProgram będzie sprawdzać kursy co {refresh_interval} sekund.")
-    print("Naciśnij Ctrl+C aby zakończyć.\n")
+    print(f"Found {len(stocks)} stocks: {', '.join(stocks.keys())}")
+    print(f"\nProgram will check prices every {refresh_interval} seconds.")
+    print("Press Ctrl+C to stop.\n")
     
     # Dictionary to store price history for each stock
     history = defaultdict(list)
@@ -255,7 +255,7 @@ def main():
             time_full = current_time.strftime("%Y-%m-%d %H:%M:%S")
             
             print(f"\n{'='*100}")
-            print(f"Aktualizacja kursów: {time_full}")
+            print(f"Price Update: {time_full}")
             print(f"{'='*100}")
             
             for stock_symbol, purchase_price in stocks.items():
@@ -285,7 +285,7 @@ def main():
                     else:
                         print(info_base)
                 else:
-                    print(f"{stock_symbol:15s} | {'BŁĄD':>14s} | Nie udało się pobrać kursu")
+                    print(f"{stock_symbol:15s} | {'ERROR':>14s} | Failed to fetch price")
             
             print(f"{'='*100}\n")
             
@@ -299,13 +299,13 @@ def main():
                     print()
             
             print(f"{'='*100}")
-            print(f"Następna aktualizacja za {refresh_interval} sekund...")
+            print(f"Next update in {refresh_interval} seconds...")
             print(f"{'='*100}")
             
             time.sleep(refresh_interval)
             
     except KeyboardInterrupt:
-        print("\n\nZakończono monitorowanie kursów.")
+        print("\n\nStopped monitoring prices.")
         sys.exit(0)
 
 
