@@ -135,7 +135,7 @@ def wait_for_key_or_timeout(timeout, navigation_handler):
     
     try:
         while remaining > 0:
-            CountdownTimer.display(remaining)
+            # Silent wait - no countdown display
             
             key = TerminalInput.read_key_with_timeout(1)
             

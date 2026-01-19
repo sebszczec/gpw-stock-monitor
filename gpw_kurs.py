@@ -20,11 +20,13 @@ from calculations import calculate_profit_loss
 # Import Rich components
 try:
     from rich.console import Console
+    from rich.live import Live
 except ImportError:
     print("Installing rich library...")
     import subprocess
     subprocess.check_call([sys.executable, "-m", "pip", "install", "rich"])
     from rich.console import Console
+    from rich.live import Live
 
 # Initialize Rich console
 console = Console()
@@ -66,74 +68,77 @@ def main():
     navigation = NavigationHandler(list(stocks.keys()))
     fetcher = StockDataFetcher()
     
+    # Clear screen once at the start
+    UIDisplay.clear_and_home()
+    
     try:
-        first_run = True
-        while True:
-            current_time = datetime.now()
-            time_str = current_time.strftime("%H:%M:%S")
-            time_full = current_time.strftime("%Y-%m-%d %H:%M:%S")
-            
-            # Create table
-            table = StockTableBuilder.create_table(f"📊 Stock Prices Update - {time_full}")
-            
-            # Fetch and display stock data
-            row_index = 0
-            for stock_symbol, purchase_price in stocks.items():
-                stock_data = fetcher.get_stock_price(stock_symbol)
+        with Live(console=console, refresh_per_second=10, screen=True) as live:
+            while True:
+                current_time = datetime.now()
+                time_str = current_time.strftime("%H:%M:%S")
+                time_full = current_time.strftime("%Y-%m-%d %H:%M:%S")
                 
-                if stock_data:
-                    # Add to history
-                    history.add(stock_symbol, time_str, stock_data.price)
-                    
-                    # Calculate profit/loss
-                    profit_loss = calculate_profit_loss(stock_data.price, purchase_price)
-                    
-                    # Add row to table
-                    is_selected = (row_index == navigation.get_selected_index())
-                    StockTableBuilder.add_stock_row(
-                        table, stock_data.to_dict(), purchase_price, profit_loss, is_selected
-                    )
-                else:
-                    is_selected = (row_index == navigation.get_selected_index())
-                    StockTableBuilder.add_error_row(table, stock_symbol, is_selected)
+                # Create table
+                table = StockTableBuilder.create_table(f"📊 Stock Prices Update - {time_full}")
                 
-                row_index += 1
-            
-            # Display the table - use smooth refresh without scrolling
-            if not first_run:
-                UIDisplay.clear_and_home()
-            first_run = False
-            console.print(table)
-            console.print()
-            
-            # Wait for input
-            action = wait_for_key_or_timeout(refresh_interval, navigation)
-            
-            # Handle chart display
-            if action == InputAction.SHOW_CHART:
-                selected_stock = navigation.get_selected_stock()
+                # Fetch and display stock data
+                row_index = 0
+                for stock_symbol, purchase_price in stocks.items():
+                    stock_data = fetcher.get_stock_price(stock_symbol)
+                    
+                    if stock_data:
+                        # Add to history
+                        history.add(stock_symbol, time_str, stock_data.price)
+                        
+                        # Calculate profit/loss
+                        profit_loss = calculate_profit_loss(stock_data.price, purchase_price)
+                        
+                        # Add row to table
+                        is_selected = (row_index == navigation.get_selected_index())
+                        StockTableBuilder.add_stock_row(
+                            table, stock_data.to_dict(), purchase_price, profit_loss, is_selected
+                        )
+                    else:
+                        is_selected = (row_index == navigation.get_selected_index())
+                        StockTableBuilder.add_error_row(table, stock_symbol, is_selected)
+                    
+                    row_index += 1
                 
-                if history.has_enough_data(selected_stock):
-                    UIDisplay.clear()
+                # Update live display
+                live.update(table)
+                
+                # Wait for input
+                action = wait_for_key_or_timeout(refresh_interval, navigation)
+                
+                # Handle chart display
+                if action == InputAction.SHOW_CHART:
+                    live.stop()
+                    selected_stock = navigation.get_selected_stock()
                     
-                    # Get currency from last read
-                    stock_data = fetcher.get_stock_price(selected_stock)
-                    currency = stock_data.currency if stock_data else 'PLN'
+                    if history.has_enough_data(selected_stock):
+                        UIDisplay.clear()
+                        
+                        # Get currency from last read
+                        stock_data = fetcher.get_stock_price(selected_stock)
+                        currency = stock_data.currency if stock_data else 'PLN'
+                        
+                        ChartDisplay.draw_chart(
+                            history.get(selected_stock), 
+                            selected_stock, 
+                            config, 
+                            currency
+                        )
+                        console.print()
+                        
+                        # Wait for ESC to return
+                        wait_for_escape()
+                        UIDisplay.clear_and_home()
+                    else:
+                        UIDisplay.show_warning("Not enough data to show chart yet.")
+                        time.sleep(1)
+                        UIDisplay.clear_and_home()
                     
-                    ChartDisplay.draw_chart(
-                        history.get(selected_stock), 
-                        selected_stock, 
-                        config, 
-                        currency
-                    )
-                    console.print()
-                    
-                    # Wait for ESC to return
-                    wait_for_escape()
-                    UIDisplay.clear()
-                else:
-                    UIDisplay.show_warning("Not enough data to show chart yet.")
-                    time.sleep(1)
+                    live.start()
             
     except KeyboardInterrupt:
         UIDisplay.show_goodbye()
