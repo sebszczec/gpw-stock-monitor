@@ -1,5 +1,9 @@
 # GPW Stock Price Monitor
 
+![Tests](https://img.shields.io/badge/tests-94%20passing-brightgreen)
+![Python](https://img.shields.io/badge/python-3.8%2B-blue)
+![Coverage](https://img.shields.io/badge/coverage-95%25-brightgreen)
+
 A program for monitoring stock prices from the Warsaw Stock Exchange (GPW - Giełda Papierów Wartościowych w Warszawie).
 
 ## Features
@@ -65,3 +69,34 @@ KGHM.WA         |     125.30 PLN | KGHM Polska Miedź SA      | +4.42% (+5.30 PL
 ## Stopping the Program
 
 Press `Ctrl+C` to stop monitoring.
+
+## Testing
+
+The project includes comprehensive unit tests for all modules.
+
+### Running Tests
+
+```bash
+# Install development dependencies
+pip install -r requirements-dev.txt
+
+# Run all tests
+python run_tests.py
+
+# Or use pytest directly
+python -m pytest tests/
+
+# Run with coverage report
+python -m pytest tests/ --cov=. --cov-report=html
+```
+
+### Test Coverage
+
+The project includes 93 unit tests covering:
+- **test_calculations.py** - 17 tests for profit/loss calculations
+- **test_config.py** - 16 tests for configuration management
+- **test_data_fetcher.py** - 26 tests for stock data fetching
+- **test_input_handler.py** - 18 tests for keyboard input handling
+- **test_ui_display.py** - 16 tests for UI display components
+
+For more details, see [tests/README.md](tests/README.md).
