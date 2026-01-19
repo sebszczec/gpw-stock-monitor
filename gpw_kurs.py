@@ -72,7 +72,7 @@ def main():
     UIDisplay.clear_and_home()
     
     try:
-        with Live(console=console, refresh_per_second=10, screen=True) as live:
+        with Live(console=console, refresh_per_second=30, screen=True) as live:
             while True:
                 current_time = datetime.now()
                 time_str = current_time.strftime("%H:%M:%S")

@@ -135,9 +135,9 @@ def wait_for_key_or_timeout(timeout, navigation_handler):
     
     try:
         while remaining > 0:
-            # Silent wait - no countdown display
+            # Check for key every 0.05 seconds for fast response
             
-            key = TerminalInput.read_key_with_timeout(1)
+            key = TerminalInput.read_key_with_timeout(0.05)
             
             if key:
                 if key.lower() == 'w':  # Move up
