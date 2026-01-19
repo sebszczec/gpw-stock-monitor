@@ -240,9 +240,11 @@ class UIDisplay:
         console.clear()
     
     @staticmethod
-    def move_cursor_home():
-        """Move cursor to home position without clearing screen."""
-        # ANSI escape sequence to move cursor to home position (1,1)
+    def clear_and_home():
+        """Clear screen and move cursor to home position without scrolling."""
+        # ANSI escape sequences:
+        # \033[2J - clear entire screen
+        # \033[H - move cursor to home position (1,1)
         import sys
-        sys.stdout.write('\033[H')
+        sys.stdout.write('\033[2J\033[H')
         sys.stdout.flush()

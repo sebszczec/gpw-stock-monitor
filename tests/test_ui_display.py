@@ -152,10 +152,10 @@ class TestUIDisplay(unittest.TestCase):
         mock_print.assert_called()
     
     @patch('sys.stdout')
-    def test_move_cursor_home(self, mock_stdout):
-        """Test moving cursor to home position."""
-        UIDisplay.move_cursor_home()
-        mock_stdout.write.assert_called_once_with('\033[H')
+    def test_clear_and_home(self, mock_stdout):
+        """Test clearing screen and moving cursor to home position."""
+        UIDisplay.clear_and_home()
+        mock_stdout.write.assert_called_once_with('\033[2J\033[H')
         mock_stdout.flush.assert_called_once()
 
 

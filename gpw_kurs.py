@@ -99,9 +99,9 @@ def main():
                 
                 row_index += 1
             
-            # Display the table - use smooth refresh
+            # Display the table - use smooth refresh without scrolling
             if not first_run:
-                UIDisplay.move_cursor_home()
+                UIDisplay.clear_and_home()
             first_run = False
             console.print(table)
             console.print()
