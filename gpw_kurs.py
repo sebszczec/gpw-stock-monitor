@@ -54,18 +54,22 @@ except ImportError:
 console = Console()
 
 
-def wait_for_key_or_timeout(timeout):
+def wait_for_key_or_timeout(timeout, stocks_list, selected_index):
     """
-    Waits for 'c' key press or timeout.
+    Waits for key press or timeout. Supports navigation and selection.
     
     Args:
         timeout: Time to wait in seconds
+        stocks_list: List of stock symbols
+        selected_index: Currently selected stock index
     
     Returns:
-        True if 'c' was pressed, False if timeout
+        Tuple (action, new_selected_index)
+        action: 'timeout', 'show_chart', or 'navigate'
     """
     start_time = time.time()
     remaining = timeout
+    current_index = selected_index
     
     # Save terminal settings
     old_settings = termios.tcgetattr(sys.stdin)
@@ -80,24 +84,66 @@ def wait_for_key_or_timeout(timeout):
             countdown_text.append("⏱️  Next update in ", style="bold cyan")
             countdown_text.append(f"{int(remaining)}", style="bold yellow")
             countdown_text.append(" seconds... ", style="bold cyan")
-            countdown_text.append("(Press 'c' to see charts)", style="italic bright_black")
+            countdown_text.append("(w/s: navigate, Enter: show chart)", style="italic bright_black")
             
             console.print(countdown_text, end='\r')
             
             # Check if there's input available (non-blocking)
             if select.select([sys.stdin], [], [], 1)[0]:
                 key = sys.stdin.read(1)
-                if key.lower() == 'c':
+                
+                # Handle arrow keys and special keys
+                if key == '\x1b':  # ESC sequence
+                    next_char = sys.stdin.read(1) if select.select([sys.stdin], [], [], 0.1)[0] else ''
+                    if next_char == '[':  # Arrow key sequence
+                        arrow = sys.stdin.read(1) if select.select([sys.stdin], [], [], 0.1)[0] else ''
+                        if arrow == 'A':  # Up arrow
+                            key = 'w'
+                        elif arrow == 'B':  # Down arrow
+                            key = 's'
+                
+                if key.lower() == 'w':  # Move up
+                    current_index = (current_index - 1) % len(stocks_list)
                     console.print()  # New line
-                    return True
+                    return ('navigate', current_index)
+                elif key.lower() == 's':  # Move down
+                    current_index = (current_index + 1) % len(stocks_list)
+                    console.print()  # New line
+                    return ('navigate', current_index)
+                elif key == '\r' or key == '\n':  # Enter
+                    console.print()  # New line
+                    return ('show_chart', current_index)
             
             elapsed = time.time() - start_time
             remaining = timeout - elapsed
         
         console.print()  # New line after countdown
-        return False
+        return ('timeout', current_index)
     finally:
         # Restore terminal settings
+        termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
+
+
+def wait_for_escape():
+    """
+    Waits for ESC key press to return to table view.
+    
+    Returns:
+        True when ESC is pressed
+    """
+    old_settings = termios.tcgetattr(sys.stdin)
+    
+    try:
+        tty.setcbreak(sys.stdin.fileno())
+        
+        console.print("[dim]Press ESC to return to table view...[/dim]")
+        
+        while True:
+            if select.select([sys.stdin], [], [], 0.5)[0]:
+                key = sys.stdin.read(1)
+                if key == '\x1b':  # ESC
+                    return True
+    finally:
         termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
 
 
@@ -339,6 +385,8 @@ def main():
     
     # Dictionary to store price history for each stock
     history = defaultdict(list)
+    selected_index = 0  # Currently selected stock
+    stocks_list = list(stocks.keys())
     
     try:
         while True:
@@ -365,6 +413,7 @@ def main():
             table.add_column("P/L %", justify="right", width=10)
             table.add_column("P/L Amount", justify="right", width=15)
             
+            row_index = 0
             for stock_symbol, purchase_price in stocks.items():
                 result = get_stock_price(stock_symbol)
                 
@@ -391,23 +440,36 @@ def main():
                         pl_percent = "[dim]-[/dim]"
                         pl_amount = "[dim]-[/dim]"
                     
+                    # Highlight selected row
+                    symbol_display = result['symbol'].replace('.WA', '')
+                    if row_index == selected_index:
+                        symbol_display = f"→ {symbol_display}"
+                    
                     table.add_row(
-                        result['symbol'].replace('.WA', ''),
+                        symbol_display,
                         f"{price:.2f}",
                         currency,
                         result['name'][:30],
                         pl_percent,
-                        pl_amount
+                        pl_amount,
+                        style="bold" if row_index == selected_index else None
                     )
                 else:
+                    symbol_display = stock_symbol
+                    if row_index == selected_index:
+                        symbol_display = f"→ {symbol_display}"
+                    
                     table.add_row(
-                        stock_symbol,
+                        symbol_display,
                         "[red]ERROR[/red]",
                         "-",
                         "[red]Failed to fetch price[/red]",
                         "[dim]-[/dim]",
-                        "[dim]-[/dim]"
+                        "[dim]-[/dim]",
+                        style="bold" if row_index == selected_index else None
                     )
+                
+                row_index += 1
             
             # Display the table
             console.print("\n")
@@ -415,23 +477,28 @@ def main():
             console.print("\n")
             
             # Wait for key press or timeout
-            show_charts = wait_for_key_or_timeout(refresh_interval)
+            action, selected_index = wait_for_key_or_timeout(refresh_interval, stocks_list, selected_index)
             
-            # Draw charts only if user pressed 'C'
-            if show_charts:
-                console.print(Panel.fit(
-                    "[bold cyan]📈 Displaying Price Charts 📈[/bold cyan]",
-                    border_style="cyan"
-                ))
-                console.print()
+            # Show chart if user pressed Enter
+            if action == 'show_chart':
+                selected_stock = stocks_list[selected_index]
                 
-                for stock_symbol in stocks.keys():
-                    if stock_symbol in history and len(history[stock_symbol]) >= 2:
-                        # Get currency from last read
-                        result = get_stock_price(stock_symbol)
-                        currency = result['currency'] if result else 'PLN'
-                        draw_chart(history[stock_symbol], stock_symbol, config, currency)
-                        console.print()
+                if selected_stock in history and len(history[selected_stock]) >= 2:
+                    console.clear()
+                    
+                    # Get currency from last read
+                    result = get_stock_price(selected_stock)
+                    currency = result['currency'] if result else 'PLN'
+                    
+                    draw_chart(history[selected_stock], selected_stock, config, currency)
+                    console.print()
+                    
+                    # Wait for ESC to return
+                    wait_for_escape()
+                    console.clear()
+                else:
+                    console.print("[yellow]Not enough data to show chart yet.[/yellow]")
+                    time.sleep(1)
             
     except KeyboardInterrupt:
         console.print("\n\n[yellow]👋 Stopped monitoring prices.[/yellow]\n")
