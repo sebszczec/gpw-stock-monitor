@@ -16,6 +16,32 @@ import termios
 from datetime import datetime
 from collections import defaultdict
 import configparser
+
+# Import Rich components
+try:
+    from rich.console import Console
+    from rich.table import Table
+    from rich.panel import Panel
+    from rich.layout import Layout
+    from rich.live import Live
+    from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn
+    from rich.text import Text
+    from rich import box
+    from rich.align import Align
+except ImportError:
+    print("Installing rich library...")
+    import subprocess
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "rich"])
+    from rich.console import Console
+    from rich.table import Table
+    from rich.panel import Panel
+    from rich.layout import Layout
+    from rich.live import Live
+    from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn
+    from rich.text import Text
+    from rich import box
+    from rich.align import Align
+
 try:
     import plotext as plt
 except ImportError:
@@ -24,10 +50,8 @@ except ImportError:
     subprocess.check_call([sys.executable, "-m", "pip", "install", "plotext"])
     import plotext as plt
 
-# ANSI colors
-COLOR_GREEN = '\033[92m'
-COLOR_RED = '\033[91m'
-COLOR_RESET = '\033[0m'
+# Initialize Rich console
+console = Console()
 
 
 def wait_for_key_or_timeout(timeout):
@@ -51,19 +75,26 @@ def wait_for_key_or_timeout(timeout):
         tty.setcbreak(sys.stdin.fileno())
         
         while remaining > 0:
-            print(f"\rNext update in {int(remaining)} seconds... (Press 'c' to see charts)", end='', flush=True)
+            # Create countdown text with Rich styling
+            countdown_text = Text()
+            countdown_text.append("⏱️  Next update in ", style="bold cyan")
+            countdown_text.append(f"{int(remaining)}", style="bold yellow")
+            countdown_text.append(" seconds... ", style="bold cyan")
+            countdown_text.append("(Press 'c' to see charts)", style="italic bright_black")
+            
+            console.print(countdown_text, end='\r')
             
             # Check if there's input available (non-blocking)
             if select.select([sys.stdin], [], [], 1)[0]:
                 key = sys.stdin.read(1)
                 if key.lower() == 'c':
-                    print()  # New line
+                    console.print()  # New line
                     return True
             
             elapsed = time.time() - start_time
             remaining = timeout - elapsed
         
-        print()  # New line after countdown
+        console.print()  # New line after countdown
         return False
     finally:
         # Restore terminal settings
@@ -98,11 +129,11 @@ def load_config():
                 'plot_height': config.getint('Settings', 'plot_height', fallback=defaults['plot_height'])
             }
         except Exception as e:
-            print(f"Warning: Error loading configuration: {e}")
-            print("Using default settings.")
+            console.print(f"[yellow]⚠️  Warning: Error loading configuration: {e}[/yellow]")
+            console.print("[yellow]Using default settings.[/yellow]")
             return defaults
     else:
-        print(f"Warning: config.ini file not found, using default settings.")
+        console.print(f"[yellow]⚠️  Warning: config.ini file not found, using default settings.[/yellow]")
         return defaults
 
 
@@ -141,10 +172,10 @@ def load_stocks_from_file(filename):
         
         return stocks if stocks else None
     except FileNotFoundError:
-        print(f"Error: File '{filename}' not found", file=sys.stderr)
+        console.print(f"[red]❌ Error: File '{filename}' not found[/red]")
         return None
     except Exception as e:
-        print(f"Error reading file: {e}", file=sys.stderr)
+        console.print(f"[red]❌ Error reading file: {e}[/red]")
         return None
 
 
@@ -167,10 +198,18 @@ def draw_chart(price_history, stock_symbol, config, currency='PLN'):
     # Use numeric indices instead of time strings
     indices = list(range(len(prices)))
     
+    # Display chart title with Rich
+    chart_title = f"📈 Price Chart: {stock_symbol.replace('.WA', '')} ({currency})"
+    console.print(Panel(
+        chart_title,
+        style="bold cyan",
+        border_style="cyan"
+    ))
+    
     # Create chart in terminal
     plt.clf()
     plt.plot(indices, prices, marker="braille")
-    plt.title(f"Price Chart {stock_symbol}")
+    plt.title(f"Price Chart {stock_symbol.replace('.WA', '')}")
     plt.xlabel("Time")
     plt.ylabel(f"Price ({currency})")
     
@@ -236,7 +275,7 @@ def get_stock_price(stock_symbol):
             price = info['regularMarketPrice']
         elif 'previousClose' in info and info['previousClose']:
             price = info['previousClose']
-            print(f"Note: Returning closing price from previous session")
+            console.print("[dim yellow]Note: Returning closing price from previous session[/dim yellow]")
         
         if price:
             currency = info.get('currency', 'PLN')
@@ -251,42 +290,52 @@ def get_stock_price(stock_symbol):
             return None
             
     except Exception as e:
-        print(f"Error fetching data: {e}", file=sys.stderr)
+        console.print(f"[red]❌ Error fetching data: {e}[/red]")
         return None
 
 
 def main():
     if len(sys.argv) != 2:
-        print("Usage: python gpw_kurs.py STOCKS_FILE")
-        print("Example: python gpw_kurs.py akcje.txt")
-        print("\nFile format: one stock symbol per line")
-        print("Example file contents:")
-        print("  PKO")
-        print("  PKNORLEN")
-        print("  KGHM")
+        console.print(Panel.fit(
+            "[bold cyan]GPW Stock Price Monitor[/bold cyan]\n\n"
+            "[yellow]Usage:[/yellow] [bold]python gpw_kurs.py STOCKS_FILE[/bold]\n"
+            "[yellow]Example:[/yellow] [bold]python gpw_kurs.py akcje.txt[/bold]\n\n"
+            "[dim]File format: one stock symbol per line[/dim]\n"
+            "[dim]Example file contents:[/dim]\n"
+            "  [green]PKO[/green]\n"
+            "  [green]PKNORLEN[/green]\n"
+            "  [green]KGHM[/green]",
+            border_style="blue",
+            title="📊 Help"
+        ))
         sys.exit(1)
     
     stocks_file = sys.argv[1]
+    
+    # Display header
+    console.print("\n[bold cyan]═" * 50 + "[/bold cyan]")
+    console.print(Align.center("[bold magenta]📈 GPW Stock Price Monitor 📈[/bold magenta]"))
+    console.print("[bold cyan]═" * 50 + "[/bold cyan]\n")
     
     # Load configuration
     config = load_config()
     refresh_interval = config['refresh_interval']
     max_history = config['max_history']
     
-    print(f"Loading stock list from file: {stocks_file}...")
+    console.print(f"[cyan]📂 Loading stock list from file:[/cyan] [bold]{stocks_file}[/bold]")
     stocks = load_stocks_from_file(stocks_file)
     
     if not stocks:
-        print("Failed to load stock list.")
+        console.print("[red]❌ Failed to load stock list.[/red]")
         sys.exit(1)
     
     if len(stocks) == 0:
-        print("File contains no stock symbols.")
+        console.print("[red]❌ File contains no stock symbols.[/red]")
         sys.exit(1)
     
-    print(f"Found {len(stocks)} stocks: {', '.join(stocks.keys())}")
-    print(f"\nProgram will check prices every {refresh_interval} seconds.")
-    print("Press Ctrl+C to stop.\n")
+    console.print(f"[green]✅ Found {len(stocks)} stocks:[/green] [bold]{', '.join(stocks.keys())}[/bold]")
+    console.print(f"\n[cyan]⏱️  Refresh interval:[/cyan] [bold yellow]{refresh_interval} seconds[/bold yellow]")
+    console.print("[dim]Press Ctrl+C to stop.[/dim]\n")
     
     # Dictionary to store price history for each stock
     history = defaultdict(list)
@@ -297,9 +346,24 @@ def main():
             time_str = current_time.strftime("%H:%M:%S")
             time_full = current_time.strftime("%Y-%m-%d %H:%M:%S")
             
-            print(f"\n{'='*100}")
-            print(f"Price Update: {time_full}")
-            print(f"{'='*100}")
+            # Create a Rich table
+            table = Table(
+                title=f"📊 Stock Prices Update - {time_full}",
+                title_style="bold cyan",
+                box=box.ROUNDED,
+                show_header=True,
+                header_style="bold magenta",
+                border_style="blue",
+                expand=False
+            )
+            
+            # Add columns
+            table.add_column("Symbol", style="cyan", no_wrap=True, width=15)
+            table.add_column("Price", justify="right", style="yellow", width=12)
+            table.add_column("Currency", justify="center", style="dim", width=8)
+            table.add_column("Company Name", style="white", width=30)
+            table.add_column("P/L %", justify="right", width=10)
+            table.add_column("P/L Amount", justify="right", width=15)
             
             for stock_symbol, purchase_price in stocks.items():
                 result = get_stock_price(stock_symbol)
@@ -313,33 +377,53 @@ def main():
                     if len(history[stock_symbol]) > max_history:
                         history[stock_symbol].pop(0)
                     
-                    # Basic information
-                    info_base = f"{result['symbol']:15s} | {price:10.2f} {currency:3s} | {result['name'][:25]:25s}"
-                    
                     # Calculate profit/loss
                     percent, amount, is_profit = calculate_profit_loss(price, purchase_price)
                     
                     if percent is not None:
                         if is_profit:
-                            info_profit = f"{COLOR_GREEN}+{percent:6.2f}% (+{amount:7.2f} {currency}){COLOR_RESET}"
+                            pl_percent = f"[green]+{percent:.2f}%[/green]"
+                            pl_amount = f"[green]+{amount:.2f} {currency}[/green]"
                         else:
-                            info_profit = f"{COLOR_RED}{percent:7.2f}% ({amount:7.2f} {currency}){COLOR_RESET}"
-                        print(f"{info_base} | {info_profit}")
+                            pl_percent = f"[red]{percent:.2f}%[/red]"
+                            pl_amount = f"[red]{amount:.2f} {currency}[/red]"
                     else:
-                        print(info_base)
+                        pl_percent = "[dim]-[/dim]"
+                        pl_amount = "[dim]-[/dim]"
+                    
+                    table.add_row(
+                        result['symbol'].replace('.WA', ''),
+                        f"{price:.2f}",
+                        currency,
+                        result['name'][:30],
+                        pl_percent,
+                        pl_amount
+                    )
                 else:
-                    print(f"{stock_symbol:15s} | {'ERROR':>14s} | Failed to fetch price")
+                    table.add_row(
+                        stock_symbol,
+                        "[red]ERROR[/red]",
+                        "-",
+                        "[red]Failed to fetch price[/red]",
+                        "[dim]-[/dim]",
+                        "[dim]-[/dim]"
+                    )
             
-            print(f"{'='*100}\n")
+            # Display the table
+            console.print("\n")
+            console.print(table)
+            console.print("\n")
             
             # Wait for key press or timeout
             show_charts = wait_for_key_or_timeout(refresh_interval)
             
             # Draw charts only if user pressed 'C'
             if show_charts:
-                print(f"\n{'='*100}")
-                print("Displaying charts...")
-                print(f"{'='*100}\n")
+                console.print(Panel.fit(
+                    "[bold cyan]📈 Displaying Price Charts 📈[/bold cyan]",
+                    border_style="cyan"
+                ))
+                console.print()
                 
                 for stock_symbol in stocks.keys():
                     if stock_symbol in history and len(history[stock_symbol]) >= 2:
@@ -347,12 +431,10 @@ def main():
                         result = get_stock_price(stock_symbol)
                         currency = result['currency'] if result else 'PLN'
                         draw_chart(history[stock_symbol], stock_symbol, config, currency)
-                        print()
-                
-                print(f"{'='*100}\n")
+                        console.print()
             
     except KeyboardInterrupt:
-        print("\n\nStopped monitoring prices.")
+        console.print("\n\n[yellow]👋 Stopped monitoring prices.[/yellow]\n")
         sys.exit(0)
 
 
