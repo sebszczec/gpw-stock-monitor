@@ -19,12 +19,12 @@ A program for monitoring stock prices from the Warsaw Stock Exchange (GPW - Gie≈
 
 - Python 3.6+
 - yfinance
-- plotext
+- rich
 
 ## Installation
 
 ```bash
-pip install yfinance plotext
+pip install yfinance rich
 ```
 
 ## Usage

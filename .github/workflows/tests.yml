@@ -25,7 +25,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install yfinance rich plotext
+        pip install yfinance rich
 
     - name: Install development dependencies
       run: |

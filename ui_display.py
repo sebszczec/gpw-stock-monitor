@@ -3,19 +3,11 @@ UI Display module for GPW Stock Monitor.
 Handles all UI rendering including tables and charts.
 """
 
-try:
-    import plotext as plt
-except ImportError:
-    print("Installing plotext library...")
-    import subprocess
-    import sys
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "plotext"])
-    import plotext as plt
-
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
 from rich.align import Align
+from rich.text import Text
 from rich import box
 
 console = Console()
@@ -126,12 +118,12 @@ class StockTableBuilder:
 
 
 class ChartDisplay:
-    """Displays stock price charts using plotext."""
+    """Displays stock price charts using Rich Unicode blocks."""
     
     @staticmethod
     def draw_chart(price_history, stock_symbol, config, currency='PLN'):
         """
-        Draws stock price chart in terminal.
+        Draws stock price chart in terminal using Rich.
         
         Args:
             price_history: List with data (time, price)
@@ -146,36 +138,141 @@ class ChartDisplay:
         times = [h[0] for h in price_history]
         prices = [h[1] for h in price_history]
         
-        # Use numeric indices instead of time strings
-        indices = list(range(len(prices)))
-        
-        # Display chart title with Rich
-        chart_title = f"📈 Price Chart: {stock_symbol.replace('.WA', '')} ({currency})"
-        console.print(Panel(
-            chart_title,
-            style="bold cyan",
-            border_style="cyan"
-        ))
-        
-        # Create chart in terminal
-        plt.clf()
-        plt.plot(indices, prices, marker="braille")
-        plt.title(f"Price Chart {stock_symbol.replace('.WA', '')}")
-        plt.xlabel("Time")
-        plt.ylabel(f"Price ({currency})")
-        
-        # Set X axis labels - show every few points for readability
-        step = max(1, len(times) // 5)  # Show max 5-6 labels
-        xticks_pos = [i for i in range(0, len(times), step)]
-        xticks_labels = [times[i] for i in xticks_pos]
-        plt.xticks(xticks_pos, xticks_labels)
-        
-        # Get plot size from config
+        # Get chart dimensions from config
         plot_width = config['plot_width'] if isinstance(config, dict) else config.get('plot_width')
         plot_height = config['plot_height'] if isinstance(config, dict) else config.get('plot_height')
         
-        plt.plotsize(plot_width, plot_height)
-        plt.show()
+        # Adjust dimensions
+        chart_width = min(plot_width, 80)
+        chart_height = min(plot_height, 20)
+        
+        # Calculate min/max for scaling
+        min_price = min(prices)
+        max_price = max(prices)
+        price_range = max_price - min_price if max_price != min_price else 1
+        
+        # Build the chart using Unicode blocks
+        chart_lines = []
+        
+        # Characters for drawing (from bottom to top: empty, quarter, half, three-quarter, full)
+        blocks = [' ', '▁', '▂', '▃', '▄', '▅', '▆', '▇', '█']
+        
+        # Scale prices to fit height
+        scaled = []
+        for price in prices:
+            if price_range > 0:
+                normalized = (price - min_price) / price_range
+            else:
+                normalized = 0.5
+            scaled.append(normalized * (chart_height - 1))
+        
+        # Resample if needed to fit width
+        if len(scaled) > chart_width:
+            step = len(scaled) / chart_width
+            resampled = []
+            resampled_times = []
+            for i in range(chart_width):
+                idx = int(i * step)
+                resampled.append(scaled[idx])
+                resampled_times.append(times[idx])
+            scaled = resampled
+            times = resampled_times
+        
+        # Build chart from top to bottom
+        for row in range(chart_height - 1, -1, -1):
+            line = Text()
+            for col, val in enumerate(scaled):
+                if val >= row + 1:
+                    # Full block
+                    line.append("█", style="cyan")
+                elif val > row:
+                    # Partial block
+                    frac = val - row
+                    block_idx = int(frac * 8)
+                    block_idx = max(1, min(8, block_idx))
+                    line.append(blocks[block_idx], style="cyan")
+                else:
+                    line.append(" ")
+            chart_lines.append(line)
+        
+        # Create price labels
+        price_labels = Text()
+        price_labels.append(f"{max_price:.2f} {currency}\n", style="yellow")
+        for _ in range(chart_height - 2):
+            price_labels.append("\n")
+        price_labels.append(f"{min_price:.2f} {currency}", style="yellow")
+        
+        # Print chart header
+        symbol_clean = stock_symbol.replace('.WA', '')
+        console.print()
+        console.print(Panel(
+            f"📈 [bold cyan]Price Chart: {symbol_clean}[/bold cyan] ({currency})",
+            border_style="cyan",
+            padding=(0, 2)
+        ))
+        console.print()
+        
+        # Print the chart with border
+        console.print(f"  [dim]┌{'─' * len(scaled)}┐[/dim]")
+        for i, line in enumerate(chart_lines):
+            # Add price label on the right side
+            if i == 0:
+                price_label = f" {max_price:.2f}"
+            elif i == len(chart_lines) - 1:
+                price_label = f" {min_price:.2f}"
+            elif i == len(chart_lines) // 2:
+                mid_price = (max_price + min_price) / 2
+                price_label = f" {mid_price:.2f}"
+            else:
+                price_label = ""
+            
+            console.print(Text("  [dim]│[/dim]") + line + Text(f"[dim]│[/dim][yellow]{price_label}[/yellow]"))
+        console.print(f"  [dim]└{'─' * len(scaled)}┘[/dim]")
+        
+        # Print time labels
+        if len(times) > 0:
+            time_line = "   "
+            # Show first, middle and last time
+            first_time = times[0]
+            last_time = times[-1]
+            mid_idx = len(times) // 2
+            mid_time = times[mid_idx] if mid_idx < len(times) else ""
+            
+            # Calculate spacing
+            spacing = len(scaled) // 2 - len(first_time)
+            time_line = f"   [dim]{first_time}[/dim]"
+            time_line += " " * max(0, spacing - len(mid_time) // 2)
+            time_line += f"[dim]{mid_time}[/dim]"
+            time_line += " " * max(0, spacing - len(mid_time) // 2)
+            time_line += f"[dim]{last_time}[/dim]"
+            console.print(time_line)
+        
+        console.print()
+        
+        # Show statistics
+        current_price = prices[-1]
+        first_price = prices[0]
+        change = current_price - first_price
+        change_pct = (change / first_price * 100) if first_price != 0 else 0
+        
+        if change >= 0:
+            change_style = "green"
+            change_symbol = "▲"
+        else:
+            change_style = "red"
+            change_symbol = "▼"
+        
+        stats = Table(show_header=False, box=box.SIMPLE, padding=(0, 2))
+        stats.add_column("Label", style="dim")
+        stats.add_column("Value", style="bold")
+        
+        stats.add_row("Current:", f"[yellow]{current_price:.2f} {currency}[/yellow]")
+        stats.add_row("High:", f"[green]{max_price:.2f} {currency}[/green]")
+        stats.add_row("Low:", f"[red]{min_price:.2f} {currency}[/red]")
+        stats.add_row("Change:", f"[{change_style}]{change_symbol} {change:+.2f} ({change_pct:+.2f}%)[/{change_style}]")
+        stats.add_row("Data points:", f"{len(prices)}")
+        
+        console.print(Panel(stats, title="[bold]Statistics[/bold]", border_style="blue"))
 
 
 class UIDisplay:

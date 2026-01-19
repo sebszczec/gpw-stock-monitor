@@ -158,7 +158,7 @@ jobs:
     - name: Install dependencies
       run: |
         pip install -r requirements-dev.txt
-        pip install yfinance rich plotext
+        pip install yfinance rich
     
     - name: Run tests
       run: python -m pytest tests/ --cov=. --cov-report=xml
