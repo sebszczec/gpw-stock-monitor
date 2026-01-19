@@ -1,6 +1,6 @@
 # GPW Stock Price Monitor
 
-![Tests](https://img.shields.io/badge/tests-94%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-95%20passing-brightgreen)
 ![Python](https://img.shields.io/badge/python-3.8%2B-blue)
 ![Coverage](https://img.shields.io/badge/coverage-95%25-brightgreen)
 
@@ -92,7 +92,7 @@ python -m pytest tests/ --cov=. --cov-report=html
 
 ### Test Coverage
 
-The project includes 93 unit tests covering:
+The project includes 95 unit tests covering:
 - **test_calculations.py** - 17 tests for profit/loss calculations
 - **test_config.py** - 16 tests for configuration management
 - **test_data_fetcher.py** - 26 tests for stock data fetching

@@ -150,6 +150,13 @@ class TestUIDisplay(unittest.TestCase):
         """Test showing help message."""
         UIDisplay.show_help()
         mock_print.assert_called()
+    
+    @patch('sys.stdout')
+    def test_move_cursor_home(self, mock_stdout):
+        """Test moving cursor to home position."""
+        UIDisplay.move_cursor_home()
+        mock_stdout.write.assert_called_once_with('\033[H')
+        mock_stdout.flush.assert_called_once()
 
 
 class TestChartDisplay(unittest.TestCase):

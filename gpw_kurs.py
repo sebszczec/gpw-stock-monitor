@@ -67,6 +67,7 @@ def main():
     fetcher = StockDataFetcher()
     
     try:
+        first_run = True
         while True:
             current_time = datetime.now()
             time_str = current_time.strftime("%H:%M:%S")
@@ -98,10 +99,12 @@ def main():
                 
                 row_index += 1
             
-            # Display the table
-            console.print("\n")
+            # Display the table - use smooth refresh
+            if not first_run:
+                UIDisplay.move_cursor_home()
+            first_run = False
             console.print(table)
-            console.print("\n")
+            console.print()
             
             # Wait for input
             action = wait_for_key_or_timeout(refresh_interval, navigation)

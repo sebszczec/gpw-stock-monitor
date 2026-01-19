@@ -6,7 +6,7 @@ Comprehensive unit test suite for the GPW Stock Monitor application.
 
 ## Statistics
 
-- **Total Tests**: 94
+- **Total Tests**: 95
 - **Test Files**: 5
 - **Test Coverage**: ~95% (estimated)
 - **All Tests**: ✅ PASSING
@@ -93,6 +93,7 @@ Comprehensive unit test suite for the GPW Stock Monitor application.
   - ✅ Error messages
   - ✅ Loading information
   - ✅ Help messages
+  - ✅ Cursor positioning
 
 - `TestChartDisplay` (4 tests)
   - ✅ Chart drawing
