@@ -117,6 +117,36 @@ class CountdownTimer:
         console.print(countdown_text, end='\r')
 
 
+def check_key_nonblocking(navigation_handler):
+    """
+    Check for key press without blocking. Returns immediately.
+    
+    Args:
+        navigation_handler: NavigationHandler instance
+    
+    Returns:
+        InputAction constant or None if no key pressed
+    """
+    old_settings = TerminalInput._set_raw_mode()
+    
+    try:
+        key = TerminalInput.read_key_with_timeout(0.01)
+        
+        if key:
+            if key.lower() == 'w':  # Move up
+                navigation_handler.move_up()
+                return InputAction.NAVIGATE_UP
+            elif key.lower() == 's':  # Move down
+                navigation_handler.move_down()
+                return InputAction.NAVIGATE_DOWN
+            elif key == '\r' or key == '\n':  # Enter
+                return InputAction.SHOW_CHART
+        
+        return None
+    finally:
+        TerminalInput._restore_terminal(old_settings)
+
+
 def wait_for_key_or_timeout(timeout, navigation_handler):
     """
     Waits for key press or timeout. Supports navigation and selection.

@@ -248,3 +248,34 @@ class UIDisplay:
         import sys
         sys.stdout.write('\033[2J\033[H')
         sys.stdout.flush()
+    
+    @staticmethod
+    def create_refresh_progress_bar(remaining_seconds, total_seconds):
+        """
+        Create a progress bar showing time until next refresh.
+        
+        Args:
+            remaining_seconds: Seconds remaining until refresh
+            total_seconds: Total seconds between refreshes
+        
+        Returns:
+            Rich renderable progress bar
+        """
+        from rich.text import Text
+        from rich.panel import Panel
+        
+        # Calculate percentage
+        percent = (remaining_seconds / total_seconds) * 100 if total_seconds > 0 else 0
+        
+        # Create progress bar (50 characters wide)
+        bar_width = 50
+        filled = int((percent / 100) * bar_width)
+        empty = bar_width - filled
+        
+        # Build progress bar string
+        bar_text = Text()
+        bar_text.append("█" * filled, style="cyan")
+        bar_text.append("░" * empty, style="dim")
+        bar_text.append(f"  {int(remaining_seconds)}s ", style="yellow")
+        
+        return bar_text
