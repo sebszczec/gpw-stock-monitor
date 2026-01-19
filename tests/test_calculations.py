@@ -3,7 +3,7 @@ Unit tests for calculations module.
 """
 
 import unittest
-from calculations import calculate_profit_loss, ProfitLossCalculator
+from src.calculations import calculate_profit_loss, ProfitLossCalculator
 
 
 class TestCalculateProfitLoss(unittest.TestCase):

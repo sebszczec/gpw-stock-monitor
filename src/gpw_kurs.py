@@ -11,33 +11,63 @@ import time
 from datetime import datetime
 
 # Import local modules
-from config import Config, load_stocks_from_file
-from data_fetcher import StockDataFetcher, PriceHistory
-from input_handler import NavigationHandler, InputAction, check_key_nonblocking, wait_for_escape
-from ui_display import UIDisplay, StockTableBuilder, ChartDisplay
-from calculations import calculate_profit_loss
+from .config import Config, load_stocks_from_file
+from .data_fetcher import StockDataFetcher, PriceHistory
+from .input_handler import NavigationHandler, InputAction, check_key_nonblocking, wait_for_escape
+from .ui_display import UIDisplay, StockTableBuilder, ChartDisplay
+from .calculations import calculate_profit_loss
 
 # Import Rich components
 try:
-    from rich.console import Console
+    from rich.console import Console, Group
     from rich.live import Live
-    from rich.layout import Layout
-    from rich.panel import Panel
-    from rich.progress import Progress, BarColumn, TextColumn
 except ImportError:
     print("Installing rich library...")
     import subprocess
     subprocess.check_call([sys.executable, "-m", "pip", "install", "rich"])
-    from rich.console import Console
+    from rich.console import Console, Group
     from rich.live import Live
-    from rich.layout import Layout
-    from rich.panel import Panel
-    from rich.progress import Progress, BarColumn, TextColumn
 
 # Initialize Rich console
 console = Console()
 
 
+def build_stock_table(stocks, navigation, fetcher, history, last_stock_data, time_str, time_full, fetch_new_data=True):
+    """
+    Build stock table with current data.
+    
+    Args:
+        stocks: Dictionary of stock symbols and purchase prices
+        navigation: NavigationHandler instance
+        fetcher: StockDataFetcher instance
+        history: PriceHistory instance
+        last_stock_data: Dictionary to store fetched stock data
+        time_str: Time string for history (HH:MM:SS)
+        time_full: Full time string for table title
+        fetch_new_data: Whether to fetch new data from API
+    
+    Returns:
+        Rich Table object
+    """
+    table = StockTableBuilder.create_table(f"📊 Stock Prices Update - {time_full}")
+    
+    for row_index, (stock_symbol, purchase_price) in enumerate(stocks.items()):
+        is_selected = (row_index == navigation.get_selected_index())
+        
+        if fetch_new_data:
+            stock_data = fetcher.get_stock_price(stock_symbol)
+            if stock_data:
+                last_stock_data[stock_symbol] = stock_data.to_dict()
+                history.add(stock_symbol, time_str, stock_data.price)
+        
+        if stock_symbol in last_stock_data:
+            stock_info = last_stock_data[stock_symbol]
+            profit_loss = calculate_profit_loss(stock_info['price'], purchase_price)
+            StockTableBuilder.add_stock_row(table, stock_info, purchase_price, profit_loss, is_selected)
+        else:
+            StockTableBuilder.add_error_row(table, stock_symbol, is_selected)
+    
+    return table
 
 
 def main():
@@ -56,7 +86,6 @@ def main():
     refresh_interval = config['refresh_interval']
     
     # Load stocks
-    console.print(f"[cyan]📂 Loading stock list from file:[/cyan] [bold]{stocks_file}[/bold]")
     stocks = load_stocks_from_file(stocks_file)
     
     if not stocks:
@@ -93,47 +122,24 @@ def main():
                     time_str = current_time.strftime("%H:%M:%S")
                     time_full = current_time.strftime("%Y-%m-%d %H:%M:%S")
                     
-                    # Create table
-                    current_table = StockTableBuilder.create_table(f"📊 Stock Prices Update - {time_full}")
-                    
-                    # Fetch and display stock data
-                    row_index = 0
-                    for stock_symbol, purchase_price in stocks.items():
-                        stock_data = fetcher.get_stock_price(stock_symbol)
-                        
-                        if stock_data:
-                            # Store for later use during navigation
-                            last_stock_data[stock_symbol] = stock_data.to_dict()
-                        
-                        if stock_data:
-                            # Add to history
-                            history.add(stock_symbol, time_str, stock_data.price)
-                            
-                            # Calculate profit/loss
-                            profit_loss = calculate_profit_loss(stock_data.price, purchase_price)
-                            
-                            # Add row to table
-                            is_selected = (row_index == navigation.get_selected_index())
-                            StockTableBuilder.add_stock_row(
-                                current_table, stock_data.to_dict(), purchase_price, profit_loss, is_selected
-                            )
-                        else:
-                            is_selected = (row_index == navigation.get_selected_index())
-                            StockTableBuilder.add_error_row(current_table, stock_symbol, is_selected)
-                        
-                        row_index += 1
+                    # Fetch new data and build table
+                    current_table = build_stock_table(
+                        stocks, navigation, fetcher, history, 
+                        last_stock_data, time_str, time_full, 
+                        fetch_new_data=True
+                    )
                     
                     next_update_time = now + refresh_interval
                 
                 # Calculate remaining time for progress bar
                 remaining_time = max(0, next_update_time - now)
                 
-                # Create progress bar
+                # Create progress bar and keyboard help
                 progress_bar = UIDisplay.create_refresh_progress_bar(remaining_time, refresh_interval)
+                keyboard_help = UIDisplay.create_keyboard_help()
                 
-                # Combine table and progress bar
-                from rich.console import Group
-                display_group = Group(current_table, progress_bar)
+                # Combine table, progress bar and keyboard help
+                display_group = Group(current_table, progress_bar, keyboard_help)
                 
                 # Update live display
                 live.update(display_group)
@@ -142,28 +148,16 @@ def main():
                 action = check_key_nonblocking(navigation)
                 
                 if action == InputAction.NAVIGATE_UP or action == InputAction.NAVIGATE_DOWN:
-                    # Rebuild table with new selection immediately
+                    # Rebuild table with new selection immediately (no fetch)
                     current_time = datetime.now()
+                    time_str = current_time.strftime("%H:%M:%S")
                     time_full = current_time.strftime("%Y-%m-%d %H:%M:%S")
                     
-                    current_table = StockTableBuilder.create_table(f"📊 Stock Prices Update - {time_full}")
-                    
-                    row_index = 0
-                    for stock_symbol, purchase_price in stocks.items():
-                        # Use last fetched stock data
-                        if stock_symbol in last_stock_data:
-                            stock_info = last_stock_data[stock_symbol]
-                            profit_loss = calculate_profit_loss(stock_info['price'], purchase_price)
-                            
-                            is_selected = (row_index == navigation.get_selected_index())
-                            StockTableBuilder.add_stock_row(
-                                current_table, stock_info, purchase_price, profit_loss, is_selected
-                            )
-                        else:
-                            is_selected = (row_index == navigation.get_selected_index())
-                            StockTableBuilder.add_error_row(current_table, stock_symbol, is_selected)
-                        
-                        row_index += 1
+                    current_table = build_stock_table(
+                        stocks, navigation, fetcher, history,
+                        last_stock_data, time_str, time_full,
+                        fetch_new_data=False
+                    )
                 
                 elif action == InputAction.SHOW_CHART:
                     live.stop()

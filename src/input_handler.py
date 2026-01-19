@@ -9,7 +9,6 @@ import tty
 import termios
 import time
 from rich.console import Console
-from rich.text import Text
 
 console = Console()
 
@@ -98,25 +97,6 @@ class NavigationHandler:
         return self.selected_index
 
 
-class CountdownTimer:
-    """Displays countdown timer with navigation hints."""
-    
-    @staticmethod
-    def display(remaining_seconds):
-        """
-        Display countdown with hints.
-        
-        Args:
-            remaining_seconds: Seconds remaining
-        """
-        countdown_text = Text()
-        countdown_text.append("⏱️  Next update in ", style="bold cyan")
-        countdown_text.append(f"{int(remaining_seconds)}", style="bold yellow")
-        countdown_text.append(" seconds... ", style="bold cyan")
-        countdown_text.append("(w/s: navigate, Enter: show chart)", style="italic bright_black")
-        console.print(countdown_text, end='\r')
-
-
 def check_key_nonblocking(navigation_handler):
     """
     Check for key press without blocking. Returns immediately.
@@ -143,46 +123,6 @@ def check_key_nonblocking(navigation_handler):
                 return InputAction.SHOW_CHART
         
         return None
-    finally:
-        TerminalInput._restore_terminal(old_settings)
-
-
-def wait_for_key_or_timeout(timeout, navigation_handler):
-    """
-    Waits for key press or timeout. Supports navigation and selection.
-    
-    Args:
-        timeout: Time to wait in seconds
-        navigation_handler: NavigationHandler instance
-    
-    Returns:
-        InputAction constant
-    """
-    start_time = time.time()
-    remaining = timeout
-    
-    old_settings = TerminalInput._set_raw_mode()
-    
-    try:
-        while remaining > 0:
-            # Check for key every 0.05 seconds for fast response
-            
-            key = TerminalInput.read_key_with_timeout(0.05)
-            
-            if key:
-                if key.lower() == 'w':  # Move up
-                    navigation_handler.move_up()
-                    return InputAction.NAVIGATE_UP
-                elif key.lower() == 's':  # Move down
-                    navigation_handler.move_down()
-                    return InputAction.NAVIGATE_DOWN
-                elif key == '\r' or key == '\n':  # Enter
-                    return InputAction.SHOW_CHART
-            
-            elapsed = time.time() - start_time
-            remaining = timeout - elapsed
-        
-        return InputAction.TIMEOUT
     finally:
         TerminalInput._restore_terminal(old_settings)
 

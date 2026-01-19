@@ -358,9 +358,6 @@ class UIDisplay:
         Returns:
             Rich renderable progress bar
         """
-        from rich.text import Text
-        from rich.panel import Panel
-        
         # Calculate percentage
         percent = (remaining_seconds / total_seconds) * 100 if total_seconds > 0 else 0
         
@@ -376,3 +373,23 @@ class UIDisplay:
         bar_text.append(f"  {int(remaining_seconds)}s ", style="yellow")
         
         return bar_text
+    
+    @staticmethod
+    def create_keyboard_help():
+        """
+        Create keyboard help text.
+        
+        Returns:
+            Rich Text with keyboard shortcuts
+        """
+        help_text = Text()
+        help_text.append("  ↑/w", style="bold cyan")
+        help_text.append(" - up  ", style="dim")
+        help_text.append("↓/s", style="bold cyan")
+        help_text.append(" - down  ", style="dim")
+        help_text.append("Enter", style="bold cyan")
+        help_text.append(" - chart  ", style="dim")
+        help_text.append("Ctrl+C", style="bold cyan")
+        help_text.append(" - exit", style="dim")
+        
+        return help_text

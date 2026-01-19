@@ -4,34 +4,82 @@
 ![Python](https://img.shields.io/badge/python-3.8%2B-blue)
 ![Coverage](https://img.shields.io/badge/coverage-95%25-brightgreen)
 
-A program for monitoring stock prices from the Warsaw Stock Exchange (GPW - Giełda Papierów Wartościowych w Warszawie).
+A terminal application for monitoring stock prices from the Warsaw Stock Exchange (GPW - Giełda Papierów Wartościowych w Warszawie) with real-time updates, interactive navigation, and price history charts.
 
 ## Features
 
-- Fetch current stock prices from GPW
-- Monitor multiple stocks simultaneously
-- Automatic refresh every 30 seconds (configurable)
-- Display price change charts in terminal
-- Calculate profit/loss relative to purchase price
-- Color-coded results (green = profit, red = loss)
+- 📈 Fetch current stock prices from GPW via Yahoo Finance
+- 📊 Monitor multiple stocks simultaneously in a rich table display
+- ⏱️ Automatic refresh every 30 seconds (configurable)
+- 📉 Display price history charts in terminal (ASCII art)
+- 💰 Calculate profit/loss relative to purchase price
+- 🎨 Color-coded results (green = profit, red = loss)
+- ⌨️ Interactive keyboard navigation (↑/↓ arrows, Enter for chart)
+- 🔄 Live progress bar showing time to next refresh
+
+## Project Structure
+
+```
+gpw/
+├── run.py                  # Entry point - run from project root
+├── akcje.txt               # Example stock list
+├── requirements-dev.txt    # Development dependencies
+├── setup.cfg               # Project configuration
+├── src/                    # Main source code
+│   ├── __init__.py
+│   ├── gpw_kurs.py         # Main application logic
+│   ├── config.py           # Configuration management
+│   ├── config.ini          # Settings file
+│   ├── data_fetcher.py     # Stock data fetching (yfinance)
+│   ├── input_handler.py    # Keyboard input handling
+│   ├── ui_display.py       # UI rendering (Rich library)
+│   └── calculations.py     # Profit/loss calculations
+└── tests/                  # Unit tests
+    ├── test_calculations.py
+    ├── test_config.py
+    ├── test_data_fetcher.py
+    ├── test_input_handler.py
+    └── test_ui_display.py
+```
 
 ## Requirements
 
-- Python 3.6+
+- Python 3.8+
 - yfinance
 - rich
 
 ## Installation
 
 ```bash
+# Clone the repository
+git clone <repository-url>
+cd gpw
+
+# Install dependencies
 pip install yfinance rich
+
+# Or install all dependencies including dev tools
+pip install -r requirements-dev.txt
 ```
 
 ## Usage
 
 ```bash
-python gpw_kurs.py akcje.txt
+# Run from project root
+python run.py akcje.txt
+
+# Or run the module directly
+python -m src.gpw_kurs akcje.txt
 ```
+
+### Keyboard Controls
+
+| Key | Action |
+|-----|--------|
+| ↑ / ↓ | Navigate between stocks |
+| Enter | Show price history chart for selected stock |
+| ESC | Return from chart view / Exit application |
+| Ctrl+C | Exit application |
 
 ## Stock File Format
 
@@ -39,36 +87,49 @@ The `akcje.txt` file should contain stock symbols with purchase prices (optional
 
 ```
 # Format: SYMBOL,PURCHASE_PRICE
-PKO,45.50
-PKNORLEN,55.20
-KGHM,120.00
+PKO,88.08
+CDR,274.00
+PEO,206.30
+KGHM,0.00
 ```
 
-If you don't provide a purchase price (or set it to 0.00), the program won't display profit/loss.
+- Stock symbols are automatically appended with `.WA` suffix for Warsaw Stock Exchange
+- If purchase price is `0.00`, profit/loss will not be displayed
+- Lines starting with `#` are treated as comments
 
 ## Configuration
 
-The `config.ini` file allows customization:
+The `src/config.ini` file allows customization:
 
-- `refresh_interval` - refresh time in seconds (default 30)
-- `max_history` - number of stored measurements (default 50)
-- `plot_width` - chart width (default 100)
-- `plot_height` - chart height (default 20)
+```ini
+[Settings]
+# Refresh interval in seconds
+refresh_interval = 30
+
+# Maximum number of historical measurements to store
+max_history = 50
+
+# Chart size (width, height)
+plot_width = 100
+plot_height = 20
+```
 
 ## Example Output
 
 ```
-================================================================================
-Price Update: 2026-01-08 14:30:00
-================================================================================
-PKO.WA          |      45.80 PLN | PKO Bank Polski SA        | +0.66% (+0.30 PLN)
-PKNORLEN.WA     |      54.50 PLN | Polski Koncern Naftowy    | -1.27% (-0.70 PLN)
-KGHM.WA         |     125.30 PLN | KGHM Polska Miedź SA      | +4.42% (+5.30 PLN)
+╭──────────────────────────────────────────────────────────────────────────────╮
+│                    📊 Stock Prices Update - 2026-01-19 14:30:00              │
+├─────────────────┬────────────┬──────────┬────────────────────────┬───────────┤
+│ Symbol          │      Price │ Currency │ Company Name           │      P/L  │
+├─────────────────┼────────────┼──────────┼────────────────────────┼───────────┤
+│ → PKO           │      89.50 │   PLN    │ PKO Bank Polski SA     │   +1.61%  │
+│   CDR           │     280.00 │   PLN    │ CD Projekt SA          │   +2.19%  │
+│   PEO          │     210.50 │   PLN    │ Bank Pekao SA          │   +2.04%  │
+╰─────────────────┴────────────┴──────────┴────────────────────────┴───────────╯
+[████████████░░░░░░░░] Next refresh in 18s
+
+↑↓ Navigate | Enter: Chart | ESC: Exit
 ```
-
-## Stopping the Program
-
-Press `Ctrl+C` to stop monitoring.
 
 ## Testing
 
@@ -87,7 +148,10 @@ python run_tests.py
 python -m pytest tests/
 
 # Run with coverage report
-python -m pytest tests/ --cov=. --cov-report=html
+python -m pytest tests/ --cov=src --cov-report=html
+
+# Run specific test file
+python -m pytest tests/test_calculations.py -v
 ```
 
 ### Test Coverage
@@ -100,3 +164,11 @@ The project includes 95 unit tests covering:
 - **test_ui_display.py** - 16 tests for UI display components
 
 For more details, see [tests/README.md](tests/README.md).
+
+## VS Code Integration
+
+The project includes VS Code launch configuration. Press **F5** to start debugging.
+
+## License
+
+MIT License

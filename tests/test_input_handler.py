@@ -4,7 +4,7 @@ Unit tests for input_handler module.
 
 import unittest
 from unittest.mock import Mock, patch, MagicMock
-from input_handler import InputAction, TerminalInput, NavigationHandler
+from src.input_handler import InputAction, TerminalInput, NavigationHandler
 
 
 class TestInputAction(unittest.TestCase):
@@ -139,12 +139,14 @@ class TestNavigationHandler(unittest.TestCase):
 class TestTerminalInput(unittest.TestCase):
     """Tests for TerminalInput class."""
     
-    @patch('input_handler.termios.tcgetattr')
-    @patch('input_handler.tty.setcbreak')
-    def test_set_raw_mode(self, mock_setcbreak, mock_tcgetattr):
+    @patch('src.input_handler.sys.stdin')
+    @patch('src.input_handler.termios.tcgetattr')
+    @patch('src.input_handler.tty.setcbreak')
+    def test_set_raw_mode(self, mock_setcbreak, mock_tcgetattr, mock_stdin):
         """Test setting terminal to raw mode."""
         mock_old_settings = Mock()
         mock_tcgetattr.return_value = mock_old_settings
+        mock_stdin.fileno.return_value = 0
         
         result = TerminalInput._set_raw_mode()
         
@@ -152,7 +154,7 @@ class TestTerminalInput(unittest.TestCase):
         mock_setcbreak.assert_called_once()
         self.assertEqual(result, mock_old_settings)
     
-    @patch('input_handler.termios.tcsetattr')
+    @patch('src.input_handler.termios.tcsetattr')
     def test_restore_terminal(self, mock_tcsetattr):
         """Test restoring terminal settings."""
         mock_old_settings = Mock()
@@ -161,8 +163,8 @@ class TestTerminalInput(unittest.TestCase):
         
         mock_tcsetattr.assert_called_once()
     
-    @patch('input_handler.select.select')
-    @patch('input_handler.sys.stdin')
+    @patch('src.input_handler.select.select')
+    @patch('src.input_handler.sys.stdin')
     def test_read_key_with_timeout_key_pressed(self, mock_stdin, mock_select):
         """Test reading key when key is pressed."""
         mock_select.return_value = ([mock_stdin], [], [])
@@ -172,8 +174,8 @@ class TestTerminalInput(unittest.TestCase):
         
         self.assertEqual(result, 'a')
     
-    @patch('input_handler.select.select')
-    @patch('input_handler.sys.stdin')
+    @patch('src.input_handler.select.select')
+    @patch('src.input_handler.sys.stdin')
     def test_read_key_with_timeout_timeout(self, mock_stdin, mock_select):
         """Test reading key when timeout occurs."""
         mock_select.return_value = ([], [], [])
@@ -182,8 +184,8 @@ class TestTerminalInput(unittest.TestCase):
         
         self.assertIsNone(result)
     
-    @patch('input_handler.select.select')
-    @patch('input_handler.sys.stdin')
+    @patch('src.input_handler.select.select')
+    @patch('src.input_handler.sys.stdin')
     def test_read_key_escape_key(self, mock_stdin, mock_select):
         """Test reading escape key."""
         # First call returns stdin available, second returns nothing (no arrow key)
@@ -197,8 +199,8 @@ class TestTerminalInput(unittest.TestCase):
         
         self.assertEqual(result, '\x1b')
     
-    @patch('input_handler.select.select')
-    @patch('input_handler.sys.stdin')
+    @patch('src.input_handler.select.select')
+    @patch('src.input_handler.sys.stdin')
     def test_read_key_arrow_up(self, mock_stdin, mock_select):
         """Test reading arrow up key."""
         mock_select.side_effect = [
@@ -212,8 +214,8 @@ class TestTerminalInput(unittest.TestCase):
         
         self.assertEqual(result, 'w')  # Arrow up converted to 'w'
     
-    @patch('input_handler.select.select')
-    @patch('input_handler.sys.stdin')
+    @patch('src.input_handler.select.select')
+    @patch('src.input_handler.sys.stdin')
     def test_read_key_arrow_down(self, mock_stdin, mock_select):
         """Test reading arrow down key."""
         mock_select.side_effect = [

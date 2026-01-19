@@ -6,7 +6,7 @@ import unittest
 import os
 import tempfile
 from unittest.mock import patch, mock_open
-from config import Config, load_stocks_from_file
+from src.config import Config, load_stocks_from_file
 
 
 class TestConfig(unittest.TestCase):

@@ -4,7 +4,7 @@ Unit tests for data_fetcher module.
 
 import unittest
 from unittest.mock import Mock, patch, MagicMock
-from data_fetcher import StockData, StockDataFetcher, PriceHistory
+from src.data_fetcher import StockData, StockDataFetcher, PriceHistory
 
 
 class TestStockData(unittest.TestCase):
@@ -49,7 +49,7 @@ class TestStockDataFetcher(unittest.TestCase):
         result = StockDataFetcher.normalize_symbol("")
         self.assertEqual(result, ".WA")
     
-    @patch('data_fetcher.yf.Ticker')
+    @patch('src.data_fetcher.yf.Ticker')
     def test_get_stock_price_success(self, mock_ticker):
         """Test successful stock price fetch."""
         # Mock yfinance response
@@ -69,7 +69,7 @@ class TestStockDataFetcher(unittest.TestCase):
         self.assertEqual(result.currency, "PLN")
         self.assertEqual(result.name, "PKO Bank Polski SA")
     
-    @patch('data_fetcher.yf.Ticker')
+    @patch('src.data_fetcher.yf.Ticker')
     def test_get_stock_price_no_price(self, mock_ticker):
         """Test stock price fetch when no price available."""
         # Mock yfinance response without price
@@ -84,7 +84,7 @@ class TestStockDataFetcher(unittest.TestCase):
         
         self.assertIsNone(result)
     
-    @patch('data_fetcher.yf.Ticker')
+    @patch('src.data_fetcher.yf.Ticker')
     def test_get_stock_price_exception(self, mock_ticker):
         """Test stock price fetch with exception."""
         mock_ticker.side_effect = Exception("Network error")

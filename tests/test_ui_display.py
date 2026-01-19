@@ -4,7 +4,7 @@ Unit tests for ui_display module.
 
 import unittest
 from unittest.mock import Mock, patch, MagicMock
-from ui_display import StockTableBuilder, UIDisplay, ChartDisplay
+from src.ui_display import StockTableBuilder, UIDisplay, ChartDisplay
 from rich.table import Table
 
 
@@ -126,26 +126,26 @@ class TestStockTableBuilder(unittest.TestCase):
 class TestUIDisplay(unittest.TestCase):
     """Tests for UIDisplay class."""
     
-    @patch('ui_display.console.print')
+    @patch('src.ui_display.console.print')
     def test_show_header(self, mock_print):
         """Test showing header."""
         UIDisplay.show_header()
         mock_print.assert_called()
     
-    @patch('ui_display.console.print')
+    @patch('src.ui_display.console.print')
     def test_show_error(self, mock_print):
         """Test showing error message."""
         UIDisplay.show_error("Test error")
         mock_print.assert_called()
     
-    @patch('ui_display.console.print')
+    @patch('src.ui_display.console.print')
     def test_show_loading_info(self, mock_print):
         """Test showing loading info."""
         stocks = {'PKO': 45.67, 'PKNORLEN': 58.90}
         UIDisplay.show_loading_info('test.txt', stocks, 30)
         mock_print.assert_called()
     
-    @patch('ui_display.console.print')
+    @patch('src.ui_display.console.print')
     def test_show_help(self, mock_print):
         """Test showing help message."""
         UIDisplay.show_help()
@@ -162,7 +162,7 @@ class TestUIDisplay(unittest.TestCase):
 class TestChartDisplay(unittest.TestCase):
     """Tests for ChartDisplay class."""
     
-    @patch('ui_display.console.print')
+    @patch('src.ui_display.console.print')
     def test_draw_chart(self, mock_print):
         """Test drawing a chart."""
         price_history = [('10:00', 45.67), ('10:30', 46.00), ('11:00', 45.80)]
@@ -173,7 +173,7 @@ class TestChartDisplay(unittest.TestCase):
         # Should print multiple times (header, chart lines, stats)
         self.assertTrue(mock_print.call_count > 5)
     
-    @patch('ui_display.console.print')
+    @patch('src.ui_display.console.print')
     def test_draw_chart_insufficient_data(self, mock_print):
         """Test drawing chart with insufficient data."""
         price_history = [('10:00', 45.67)]
@@ -182,7 +182,7 @@ class TestChartDisplay(unittest.TestCase):
         ChartDisplay.draw_chart(price_history, "PKO.WA", config, 'PLN')
         mock_print.assert_called()
     
-    @patch('ui_display.console.print')
+    @patch('src.ui_display.console.print')
     def test_draw_chart_empty_history(self, mock_print):
         """Test drawing chart with empty history."""
         price_history = []
@@ -191,7 +191,7 @@ class TestChartDisplay(unittest.TestCase):
         ChartDisplay.draw_chart(price_history, "PKO.WA", config, 'PLN')
         mock_print.assert_called()
     
-    @patch('ui_display.console.print')
+    @patch('src.ui_display.console.print')
     def test_draw_chart_custom_size(self, mock_print):
         """Test drawing chart with custom size."""
         price_history = [('10:00', 45.67), ('10:30', 46.00)]

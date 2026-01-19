@@ -26,7 +26,7 @@ def run_tests():
         sys.executable, "-m", "pytest",
         "tests/",
         "-v",
-        "--cov=.",
+        "--cov=src",
         "--cov-report=term-missing",
         "--cov-report=html"
     ]
