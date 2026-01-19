@@ -142,20 +142,16 @@ def wait_for_key_or_timeout(timeout, navigation_handler):
             if key:
                 if key.lower() == 'w':  # Move up
                     navigation_handler.move_up()
-                    console.print()
                     return InputAction.NAVIGATE_UP
                 elif key.lower() == 's':  # Move down
                     navigation_handler.move_down()
-                    console.print()
                     return InputAction.NAVIGATE_DOWN
                 elif key == '\r' or key == '\n':  # Enter
-                    console.print()
                     return InputAction.SHOW_CHART
             
             elapsed = time.time() - start_time
             remaining = timeout - elapsed
         
-        console.print()
         return InputAction.TIMEOUT
     finally:
         TerminalInput._restore_terminal(old_settings)
