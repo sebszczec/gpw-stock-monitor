@@ -71,9 +71,12 @@ python run.py akcje.txt
 # Or run the module directly
 python -m src.gpw_kurs akcje.txt
 ```
-# By docker 
+# Or by docker
+
+```bash
 docker compose build # will fetch fresh repo from GitHub, it will not compile local code
 docker compose run --rm stock-monitor
+```
 
 ### Keyboard Controls
 
