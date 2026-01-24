@@ -1,0 +1,9 @@
+services:
+  stock-monitor:
+    build: .
+    container_name: gpw-monitor
+    tty: true
+    stdin_open: true
+    volumes:
+      - ./data:/app/data
+    command: ["data/akcje.txt"]

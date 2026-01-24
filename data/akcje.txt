@@ -1,0 +1,6 @@
+# List of stock symbols to monitor
+# Format: SYMBOL,PURCHASE_PRICE
+# If purchase price = 0.00, profit/loss will not be displayed
+PKO,88.08
+CDR,274.00
+PEO,206.30
