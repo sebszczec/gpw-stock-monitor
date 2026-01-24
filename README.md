@@ -72,7 +72,6 @@ python run.py akcje.txt
 python -m src.gpw_kurs akcje.txt
 
 # Or by docker
-
 docker compose build # will fetch fresh repo from GitHub, it will not compile local code
 docker compose run --rm stock-monitor
 ```
