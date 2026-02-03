@@ -31,7 +31,8 @@ def run_tests():
         "--cov-report=html"
     ]
     
-    result = subprocess.run(cmd)
+    # Use sys.executable to inherit stdin/stdout/stderr properly
+    result = subprocess.run(cmd, stdin=sys.stdin, stdout=sys.stdout, stderr=sys.stderr)
     
     print()
     print("=" * 70)
