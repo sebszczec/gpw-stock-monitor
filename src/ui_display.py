@@ -226,7 +226,7 @@ class ChartDisplay:
             else:
                 price_label = ""
             
-            console.print(Text("  [dim]│[/dim]") + line + Text(f"[dim]│[/dim][yellow]{price_label}[/yellow]"))
+            console.print(Text.from_markup("  [dim]│[/dim]") + line + Text.from_markup(f"[dim]│[/dim][yellow]{price_label}[/yellow]"))
         console.print(f"  [dim]└{'─' * len(scaled)}┘[/dim]")
         
         # Print time labels
